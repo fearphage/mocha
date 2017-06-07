@@ -71,35 +71,57 @@ describe('regressions', function () {
         mode = mode || 'always';
         var spies = [];
 
-        function spy (skip) {
+        function spy (label) {
+          var skip = label === name;
+
           function wrapped () {
             if ((!wrapped.runCount++ || mode === 'always') && skip) {
+              wrapped.skipCount++;
               this.skip();
             }
           }
 
+          wrapped.label = label;
           wrapped.runCount = 0;
+          wrapped.skipCount = 0;
+
           spies.push(wrapped);
+
           return wrapped;
         }
 
         describe(name, function () {
           describe('meta', function () {
-            before(spy(name === 'beforeAll'));
-            before(spy(name === 'beforeAll'));
-            beforeEach(spy(name === 'beforeEach'));
-            beforeEach(spy(name === 'beforeEach'));
-            it('might be pending', spy(name === 'test'));
-            it('might be pending', spy(name === 'test'));
-            afterEach(spy(name === 'afterEach'));
-            afterEach(spy(name === 'afterEach'));
-            after(spy(name === 'afterAll'));
-            after(spy(name === 'afterAll'));
+            before(spy('beforeAll'));
+            before(spy('beforeAll'));
+            beforeEach(spy('beforeEach'));
+            beforeEach(spy('beforeEach'));
+            it('might be pending', spy('test'));
+            it('might be pending', spy('test'));
+            afterEach(spy('afterEach'));
+            afterEach(spy('afterEach'));
+            after(spy('afterAll'));
+            after(spy('afterAll'));
           });
 
           after(name + ' - ' + mode, function () {
+            function countToWords (count) {
+              return count === 1
+                ? 'once'
+                : count === 2
+                  ? 'twice'
+                  : 'more than twice'
+              ;
+            }
+
             map(spies, function (spy) {
-              return Boolean(spy.runCount);
+              return spy.label + ': ' + (
+                spy.skipCount
+                ? 'called skip ' + countToWords(spy.skipCount)
+                : spy.runCount === 0
+                  ? 'skipped'
+                  : 'run ' + countToWords(spy.runCount)
+              );
             })
               .should
               .deepEqual(expected);
@@ -108,120 +130,120 @@ describe('regressions', function () {
       }
 
       testPendingRunnables('beforeAll', [
-        true, // beforeAll
-        true,
-        false, // beforeEach
-        false,
-        false, // test
-        false,
-        false, // afterEach
-        false,
-        true, // afterAll
-        true
+        'beforeAll: called skip once',
+        'beforeAll: called skip once',
+        'beforeEach: skipped',
+        'beforeEach: skipped',
+        'test: skipped',
+        'test: skipped',
+        'afterEach: skipped',
+        'afterEach: skipped',
+        'afterAll: run once',
+        'afterAll: run once'
       ]);
 
       testPendingRunnables('beforeAll', [
-        true, // beforeAll
-        true,
-        false, // beforeEach
-        false,
-        false, // test
-        false,
-        false, // afterEach
-        false,
-        true, // afterAll
-        true
+        'beforeAll: called skip once',
+        'beforeAll: called skip once',
+        'beforeEach: skipped',
+        'beforeEach: skipped',
+        'test: skipped',
+        'test: skipped',
+        'afterEach: skipped',
+        'afterEach: skipped',
+        'afterAll: run once',
+        'afterAll: run once'
       ], 'once');
 
       testPendingRunnables('beforeEach', [
-        true, // beforeAll
-        true,
-        true, // beforeEach
-        true,
-        false, // test
-        false,
-        true, // afterEach
-        true,
-        true, // afterAll
-        true
+        'beforeAll: run once',
+        'beforeAll: run once',
+        'beforeEach: called skip twice',
+        'beforeEach: called skip twice',
+        'test: skipped',
+        'test: skipped',
+        'afterEach: run twice',
+        'afterEach: run twice',
+        'afterAll: run once',
+        'afterAll: run once'
       ]);
 
       testPendingRunnables('beforeEach', [
-        true, // beforeAll
-        true,
-        true, // beforeEach
-        true,
-        false, // test
-        true,
-        true, // afterEach
-        true,
-        true, // afterAll
-        true
+        'beforeAll: run once',
+        'beforeAll: run once',
+        'beforeEach: called skip once',
+        'beforeEach: called skip once',
+        'test: skipped',
+        'test: run once',
+        'afterEach: run twice',
+        'afterEach: run twice',
+        'afterAll: run once',
+        'afterAll: run once'
       ], 'once');
 
       testPendingRunnables('test', [
-        true, // beforeAll
-        true,
-        true, // beforeEach
-        true,
-        true, // test
-        true,
-        true, // afterEach
-        true,
-        true, // afterAll
-        true
+        'beforeAll: run once',
+        'beforeAll: run once',
+        'beforeEach: run twice',
+        'beforeEach: run twice',
+        'test: called skip once',
+        'test: called skip once',
+        'afterEach: run twice',
+        'afterEach: run twice',
+        'afterAll: run once',
+        'afterAll: run once'
       ]);
 
       testPendingRunnables('test', [
-        true, // beforeAll
-        true,
-        true, // beforeEach
-        true,
-        true, // test
-        true,
-        true, // afterEach
-        true,
-        true, // afterAll
-        true
+        'beforeAll: run once',
+        'beforeAll: run once',
+        'beforeEach: run twice',
+        'beforeEach: run twice',
+        'test: called skip once',
+        'test: called skip once',
+        'afterEach: run twice',
+        'afterEach: run twice',
+        'afterAll: run once',
+        'afterAll: run once'
       ], 'once');
 
       testPendingRunnables('afterEach', [
-        true, // beforeAll
-        true,
-        true, // beforeEach
-        true,
-        true, // test
-        false,
-        true, // afterEach
-        true,
-        true, // afterAll
-        true
+        'beforeAll: run once',
+        'beforeAll: run once',
+        'beforeEach: run once',
+        'beforeEach: run once',
+        'test: run once',
+        'test: skipped',
+        'afterEach: called skip once',
+        'afterEach: called skip once',
+        'afterAll: run once',
+        'afterAll: run once'
       ], 'once');
 
       testPendingRunnables('afterAll', [
-        true, // beforeAll
-        true,
-        true, // beforeEach
-        true,
-        true, // test
-        true,
-        true, // afterEach
-        true,
-        true, // afterAll
-        true
+        'beforeAll: run once',
+        'beforeAll: run once',
+        'beforeEach: run twice',
+        'beforeEach: run twice',
+        'test: run once',
+        'test: run once',
+        'afterEach: run twice',
+        'afterEach: run twice',
+        'afterAll: called skip once',
+        'afterAll: called skip once'
       ]);
 
       testPendingRunnables('afterAll', [
-        true, // beforeAll
-        true,
-        true, // beforeEach
-        true,
-        true, // test
-        true,
-        true, // afterEach
-        true,
-        true, // afterAll
-        true
+        'beforeAll: run once',
+        'beforeAll: run once',
+        'beforeEach: run twice',
+        'beforeEach: run twice',
+        'test: run once',
+        'test: run once',
+        'afterEach: run twice',
+        'afterEach: run twice',
+        'afterAll: called skip once',
+        'afterAll: called skip once'
       ], 'once');
     });
 
